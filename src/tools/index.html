@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'SF Pro Display', -apple-system, sans-serif;
+        }
+
+        .message-container {
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .message-card {
+            background: rgba(30, 30, 30, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .json-key { color: #c084fc; }
+        .json-string { color: #34d399; }
+        .json-number { color: #60a5fa; }
+        .json-boolean { color: #fbbf24; }
+        .json-null { color: #f87171; }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <header class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            WebSocket Monitor
+        </h1>
+        <div id="connection-status" class="flex items-center gap-2 px-4 py-2 rounded-full"></div>
+    </header>
+
+    <div class="message-container" id="messages"></div>
+
+    <script>
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, null, 2);
+            }
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function updateConnectionStatus(isConnected) {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.innerHTML = `
+                <span class="h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}"></span>
+                <span class="text-sm">${isConnected ? 'Connected' : 'Disconnected'}</span>
+            `;
+        }
+
+        function addMessage(data) {
+            const messagesEl = document.getElementById('messages');
+            const time = new Date(data.timestamp).toLocaleTimeString();
+            const isError = data.type.includes('error');
+
+            const messageCard = document.createElement('div');
+            messageCard.className = `message-card p-4 rounded-lg mb-3`;
+            messageCard.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full ${isError ? 'bg-red-500' : 'bg-blue-500'}"></span>
+                        <span class="font-medium">${data.type}</span>
+                        <span class="text-sm text-gray-400">${time}</span>
+                    </div>
+                </div>
+                <div class="font-mono text-sm whitespace-pre-wrap overflow-x-auto">
+                    ${syntaxHighlight(data)}
+                </div>
+            `;
+
+            messagesEl.insertBefore(messageCard, messagesEl.firstChild);
+        }
+
+        function connectWebSocket() {
+            const ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                ws.send(JSON.stringify({
+                    command_type: "MONITOR",
+                    parameters: {
+                        action: "subscribe",
+                        monitor_id: `monitor_${Date.now()}`
+                    }
+                }));
+            };
+
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addMessage(data);
+            };
+        }
+
+        connectWebSocket();
+    </script>
+</body>
+</html>
