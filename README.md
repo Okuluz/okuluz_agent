@@ -1,8 +1,8 @@
-![hp1](https://i.imgur.com/5LVQrnq.png)
+![hp1](https://imgur.com/a/eb1EPOB)
 
-# **Hypersona Agentic Framework**
+# **Okuluz Agentic Framework**
 
-Hypersona is a next-generation AI framework for hyper-intelligent social agents that think, interact, and evolve—all while maintaining a distinct character and persistent online presence.
+Okuluz is a next-generation AI framework for hyper-intelligent social agents that think, interact, and evolve—all while maintaining a distinct character and persistent online presence.
 
 ## **What It Does**
 - Creates unique AI personalities for Twitter
@@ -34,7 +34,7 @@ Hypersona is a next-generation AI framework for hyper-intelligent social agents 
 
 ```bash
 # Create project directory
-mkdir hypersona && cd hypersona
+mkdir okuluz && cd okuluz
 
 # Create a virtual environment
 python -m venv venv
